@@ -6,7 +6,7 @@
 using namespace sf;
 
 void save();
-void load(Texture, Texture, Texture);
+void load();
 
 // Variables
 std::vector<Sprite*> barriers;
@@ -21,14 +21,20 @@ int main() {
 
 	RenderWindow window(VideoMode(1920, 1080), ""); // , Style::Fullscreen);
 
-	Texture barrierTexture, checkpointTexture, vehicleTexture;
+	Sprite spriteBackground;
+	Texture barrierTexture, checkpointTexture, vehicleTexture, background;
 	Font font;
 	Text debugText, idText("ID = ", font), nextText("nextID = ", font), pathText("pathID = ", font);
 
 	idText.setPosition(debugText.getPosition().x,	debugText.getPosition().y + 40);
 	nextText.setPosition(idText.getPosition().x,	idText.getPosition().y + 40);
 	pathText.setPosition(nextText.getPosition().x,	nextText.getPosition().y + 40);
-
+	
+	if (!background.loadFromFile("graphics/background.png")) {
+		std::cout << "Background failed to load. Please restart with \"background.png\" in the graphics folder." << std::endl;
+	} else {
+		spriteBackground.setTexture(background);
+	}
 	if (!barrierTexture.loadFromFile("graphics/barrier.png")) {
 		std::cout << "Barrier failed to load. Please restart with \"barrier.png\" in the graphics folder." << std::endl;
 	}
@@ -104,7 +110,19 @@ int main() {
 				}
 				else if (event.key.code == Keyboard::L) {
 					std::cout << "\"L\" pressed. Attempting to load." << std::endl;
-					load(barrierTexture, checkpointTexture, vehicleTexture);
+					load();
+					for (Sprite* s : barriers) {
+						s->setTexture(barrierTexture);
+						s->setOrigin(Vector2f(s->getTexture()->getSize().x / 2, s->getTexture()->getSize().y / 2));
+					}
+					for (Sprite* s : checkpoints) {
+						s->setTexture(checkpointTexture);
+						s->setOrigin(Vector2f(s->getTexture()->getSize().x / 2, s->getTexture()->getSize().y / 2));
+					}
+					for (Sprite* s : vehicles) {
+						s->setTexture(vehicleTexture);
+						s->setOrigin(Vector2f(s->getTexture()->getSize().x / 2, s->getTexture()->getSize().y / 2));
+					}
 				}
 				else if (event.key.code == Keyboard::T) {
 					if (type == "checkpoint") {
@@ -307,6 +325,7 @@ int main() {
 		}
 		
 		window.clear();
+		window.draw(spriteBackground);
 		for (int i = 0; i < barriers.size(); i++) {
 			window.draw(*barriers[i]);
 		}
@@ -383,14 +402,16 @@ void save() {
 	std::cout << "File saved." << std::endl;
 }
 
-void load(Texture barrier_, Texture checkpoint_, Texture vehicle_) {
+void load() {
 	std::string readLine;
 	std::string subLine;
 	std::ifstream file;
+
+	std::cout << "Loading barriers.." << std::endl;
 	file.open("track/barriers.ini");
 	while (getline(file, readLine)) {
 		if (readLine.substr(0, 1) == "[") {
-			Sprite* barrier = new Sprite(barrier_);
+			Sprite* barrier = new Sprite();
 			getline(file, readLine);
 			subLine = readLine.substr(readLine.find("=") + 1);
 			barrier->move(Vector2f(std::stoi(subLine), 0));
@@ -404,4 +425,55 @@ void load(Texture barrier_, Texture checkpoint_, Texture vehicle_) {
 		}
 	}
 	file.close();
+
+	std::cout << "Loading checkpoints.." << std::endl;
+	file.open("track/checkpoints.ini");
+	while (getline(file, readLine)) {
+		if (readLine.substr(0, 1) == "[") {
+			Sprite* checkpoint = new Sprite();
+			std::vector<int> id = std::vector<int>(3);
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			id[0] = std::stoi(subLine);
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			id[1] = std::stoi(subLine);
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			id[2] = std::stoi(subLine);
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			checkpoint->move(Vector2f(std::stoi(subLine), 0));
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			checkpoint->move(Vector2f(0, std::stoi(subLine)));
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			checkpoint->rotate(std::stof(subLine));
+			checkpoints.push_back(checkpoint);
+			ids.push_back(id);
+		}
+	}
+	file.close();
+
+	std::cout << "Loading vehicles.." << std::endl;
+	file.open("track/vehicles.ini");
+	while (getline(file, readLine)) {
+		if (readLine.substr(0, 1) == "[") {
+			Sprite* vehicle = new Sprite();
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			vehicle->move(Vector2f(std::stoi(subLine), 0));
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			vehicle->move(Vector2f(0, std::stoi(subLine)));
+			getline(file, readLine);
+			subLine = readLine.substr(readLine.find("=") + 1);
+			vehicle->rotate(std::stof(subLine));
+			vehicles.push_back(vehicle);
+		}
+	}
+	file.close();
+
+	std::cout << "Track loaded." << std::endl;
 }
